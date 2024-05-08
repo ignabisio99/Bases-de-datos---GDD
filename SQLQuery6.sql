@@ -51,15 +51,23 @@ WHERE NOT EXISTS (SELECT p.stock_num FROM product_types p
 					WHERE p.stock_num = i.stock_num AND p.description = 'baseball gloves')
 ORDER BY c.company ASC, o.order_num DESC
 
--- EJ 7 ESTA MAL
+-- EJ 7
 
 SELECT c.customer_num, c.fname, c.lname FROM customer c
-WHERE NOT EXISTS (SELECT o.customer_num FROM orders o
+WHERE c.customer_num NOT IN (SELECT o.customer_num FROM orders o
 					JOIN items i on i.order_num = o.order_num
-					WHERE o.customer_num = c.customer_num AND i.manu_code = 'HSK') 
+					WHERE i.manu_code = 'HSK') 
 
 -- EJ 8
 
+SELECT c.customer_num, c.fname, c.lname FROM customer c
+WHERE c.customer_num IN (SELECT o.customer_num FROM orders o
+					JOIN items i on i.order_num = o.order_num
+					WHERE i.manu_code = 'HSK'
+					GROUP BY o.customer_num
+					HAVING COUNT(DISTINCT i.stock_num) = (SELECT COUNT(DISTINCT stock_num)
+															FROM items
+															WHERE manu_code = 'HSK')) 
 
 -- EJ 9
 
@@ -74,20 +82,73 @@ WHERE p.stock_num = 1
 
 -- EJ 10
 
+SELECT 1 AS ClaveOrd, c.city, c.company FROM customer c
+WHERE c.city = 'Redwood City'
+UNION 
+SELECT 2 AS ClaveOrd, c2.city, c2.company FROM customer c2
+WHERE c2.city != 'Redwood City'
+ORDER BY 1, 2
 
 -- EJ 11 MAL
 
-SELECT TOP 2 i1.stock_num ,SUM(i1.quantity) AS Cantidad FROM items i1
-WHERE EXISTS (SELECT TOP 2 i11.stock_num ,SUM(i11.quantity) AS Cantidad FROM items i11
-						GROUP BY i11.stock_num
-						ORDER BY SUM(i11.quantity) DESC)
+SELECT TOP 2 i1.stock_num, SUM(i1.quantity) AS Cantidad FROM items i1
 GROUP BY i1.stock_num
-UNION 
-SELECT TOP 2 i2.stock_num ,SUM(i2.quantity) AS Cantidad FROM items i2
-WHERE EXISTS (SELECT TOP 2 i22.stock_num ,SUM(i22.quantity) AS Cantidad FROM items i22
-						GROUP BY i22.stock_num
-						ORDER BY SUM(i22.quantity) ASC)
-GROUP BY i2.stock_num
+ORDER BY SUM(i1.quantity) DESC
+
+UNION
+
+SELECT TOP 2 i1.stock_num, SUM(i1.quantity) AS Cantidad FROM items i1
+GROUP BY i1.stock_num
+ORDER BY SUM(i1.quantity)
 
 -- EJ 12
 
+CREATE VIEW ClientesConMultiplesOrdenes 
+(numero_de_cliente, nombre, apellido)
+AS
+SELECT c.customer_num, c.fname, c.lname FROM customer c
+WHERE 1 < (SELECT COUNT(o.customer_num) FROM orders o
+			WHERE o.customer_num = c.customer_num)
+
+SELECT * FROM ClientesConMultiplesOrdenes
+
+-- EJ 13
+
+CREATE VIEW Productos_HRO
+(stock_num, manu_code, unit_price, unit_code, status)
+AS
+SELECT * FROM products
+WHERE manu_code = 'HRO'
+WITH CHECK OPTION
+
+INSERT INTO Productos_HRO(stock_num, manu_code, unit_price, unit_code,status)
+VALUES (303,'ANZ',1,1,NULL)
+
+INSERT INTO Productos_HRO(stock_num, manu_code, unit_price, unit_code,status)
+VALUES (303,'HRO',1,1,NULL)
+
+SELECT * FROM Productos_HRO
+
+-- EJ 14
+
+BEGIN TRANSACTION 
+
+	INSERT INTO customer(customer_num,fname, lname) VALUES (24912,'Fred', 'Filstone')
+
+	SELECT * FROM customer c
+	WHERE c.fname = 'Fred'
+
+ROLLBACK TRANSACTION
+
+-- EJ 15
+
+BEGIN TRANSACTION
+
+	INSERT INTO manufact(manu_code,manu_name,lead_time) VALUES ('AZZ','AZZIO SA',5)
+
+	INSERT INTO products(stock_num, manu_code, unit_price, unit_code)
+	SELECT p.stock_num, p.manu_code, p.unit_price, p.unit_code FROM products p
+	JOIN product_types t ON t.stock_num = p.stock_num
+	WHERE p.manu_code = 'AZZ' AND t.description LIKE '%tennis%'
+
+ROLLBACK TRANSACTION
