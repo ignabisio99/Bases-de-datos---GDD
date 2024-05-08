@@ -89,18 +89,20 @@ SELECT 2 AS ClaveOrd, c2.city, c2.company FROM customer c2
 WHERE c2.city != 'Redwood City'
 ORDER BY 1, 2
 
--- EJ 11 MAL
+-- EJ 11
 
-SELECT TOP 2 i1.stock_num, SUM(i1.quantity) AS Cantidad FROM items i1
+SELECT i1.stock_num, SUM(i1.quantity) AS Cantidad FROM items i1
 GROUP BY i1.stock_num
-ORDER BY SUM(i1.quantity) DESC
-
+HAVING i1.stock_num IN (SELECT TOP 2 i11.stock_num FROM items i11
+						GROUP BY i11.stock_num
+						ORDER BY SUM(i11.quantity) DESC)
 UNION
-
-SELECT TOP 2 i1.stock_num, SUM(i1.quantity) AS Cantidad FROM items i1
+SELECT i1.stock_num, SUM(i1.quantity) AS Cantidad FROM items i1
 GROUP BY i1.stock_num
-ORDER BY SUM(i1.quantity)
-
+HAVING i1.stock_num IN (SELECT TOP 2 i11.stock_num FROM items i11
+						GROUP BY i11.stock_num
+						ORDER BY SUM(i11.quantity) ASC)
+ORDER BY 2 DESC
 -- EJ 12
 
 CREATE VIEW ClientesConMultiplesOrdenes 
