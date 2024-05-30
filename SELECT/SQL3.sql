@@ -51,11 +51,11 @@ SELECT MAX(ship_charge), MIN(ship_charge), AVG(ship_charge) FROM orders
 -- Ej 11
 
 SELECT order_num, order_date, ship_date FROM orders
-WHERE MONTH(order_date) = MONTH(ship_date)
+WHERE MONTH(order_date) = MONTH(ship_date) AND YEAR(order_date) = YEAR(ship_date)
 
--- Ej 12 DUDOSO
+-- Ej 12
 
-SELECT COUNT(ship_date),SUM(ship_charge) FROM orders
+SELECT customer_num, ship_date, COUNT(ship_date),SUM(ship_charge) FROM orders
 GROUP BY customer_num,ship_date
 ORDER BY SUM(ship_charge) DESC
 
@@ -75,40 +75,63 @@ ORDER BY company
 
 -- Ej 15
 
-SELECT COUNT(DISTINCT item_num) FROM items
+SELECT manu_code, COUNT(DISTINCT item_num) FROM items
 GROUP BY manu_code
-HAVING SUM(unit_price) > 1500
+HAVING SUM(unit_price*quantity) > 1500
 ORDER BY COUNT(DISTINCT item_num) DESC
 
 -- Ej 16
 
-SELECT manu_code, item_num, quantity, quantity * unit_price FROM items
+SELECT manu_code, stock_num, SUM(quantity), SUM(quantity * unit_price) FROM items
 WHERE manu_code LIKE '_R%'
-ORDER BY manu_code, item_num
+GROUP BY manu_code, stock_num
+ORDER BY manu_code, stock_num
+
+-- Ej 17
+
+SELECT customer_num, count(order_num) AS cantCompras, MIN(order_date) AS primeraCompra, 
+MAX(order_date) AS ultimaCompra INTO #ordenesTemp
+FROM orders
+GROUP BY customer_num
+
+SELECT * FROM #ordenesTemp
+WHERE primeraCompra < '2015-05-23 00:00:00.000'
+ORDER BY ultimaCompra DESC
+
+-- Ej 18
+
+SELECT cantCompras, COUNT(DISTINCT customer_num) AS cantClientes FROM #ordenesTemp
+GROUP BY cantCompras
+ORDER BY 2 DESC
+
+-- Ej 19
+
+SELECT * from #ordenesTemp
+-- SE borra la tabla porque es solo temporal
 
 -- Ej 20
 
-SELECT COUNT(customer_num) FROM customer
+SELECT state, city, COUNT(customer_num) FROM customer
 WHERE company LIKE '%ts%' AND zipcode BETWEEN 93000 AND 94100 AND city != 'Mountain View'
 GROUP BY state,city
 ORDER BY city
 
 -- Ej 21
 
-SELECT COUNT(customer_num) FROM customer
-WHERE company LIKE '[A-L]%'
+SELECT state, COUNT(customer_num) FROM customer
+WHERE company LIKE '[A-L]%' AND customer_num_referedBy IS NOT NULL
 GROUP BY state
 
 -- Ej 22
 
-SELECT AVG(lead_time) FROM manufact
-WHERE manu_name LIKE '%e%'
+SELECT state, AVG(lead_time)
+FROM manufact
+WHERE manu_name LIKE '%e%' AND lead_time BETWEEN 5 AND 20
 GROUP BY state
-HAVING AVG(lead_time) BETWEEN 5 AND 20
 
 -- Ej 23
 
-SELECT COUNT(unit_descr)+1 FROM units
+SELECT unit, COUNT(unit_descr)+1 FROM units
 WHERE unit_descr IS NOT NULL 
 GROUP BY unit
 HAVING COUNT(unit_descr) > 5
