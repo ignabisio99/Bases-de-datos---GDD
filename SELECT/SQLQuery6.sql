@@ -36,11 +36,11 @@ HAVING SUM(i.quantity * i.unit_price) < (SELECT AVG(i2.quantity * i2.unit_price)
 
 -- EJ 5
 
-SELECT m.manu_code, m.manu_name, p.stock_num, u.unit_descr, p.unit_price FROM manufact m
+SELECT m.manu_code, m.manu_name, p.stock_num, pt.description, p.unit_price FROM manufact m
 JOIN products p ON p.manu_code = m.manu_code
-JOIN units u ON u.unit_code = p.unit_code
-WHERE p.unit_price > (SELECT AVG(i2.unit_price) FROM items i2
-						WHERE i2.manu_code = m.manu_code)
+JOIN product_types pt ON pt.stock_num = p.stock_num
+WHERE p.unit_price > (SELECT AVG(p2.unit_price) FROM products p2
+						WHERE p2.manu_code = m.manu_code)
 
 -- EJ 6 
 
@@ -48,7 +48,7 @@ SELECT o.customer_num, c.company, o.order_num, o.order_date FROM orders o
 JOIN customer c ON c.customer_num = o.customer_num
 JOIN items i ON i.order_num = o.order_num
 WHERE NOT EXISTS (SELECT p.stock_num FROM product_types p 
-					WHERE p.stock_num = i.stock_num AND p.description = 'baseball gloves')
+					WHERE p.stock_num = i.stock_num AND p.description = '%baseball gloves%')
 ORDER BY c.company ASC, o.order_num DESC
 
 -- EJ 7
@@ -149,8 +149,8 @@ BEGIN TRANSACTION
 	INSERT INTO manufact(manu_code,manu_name,lead_time) VALUES ('AZZ','AZZIO SA',5)
 
 	INSERT INTO products(stock_num, manu_code, unit_price, unit_code)
-	SELECT p.stock_num, p.manu_code, p.unit_price, p.unit_code FROM products p
+	SELECT p.stock_num, 'AZZ', p.unit_price, p.unit_code FROM products p
 	JOIN product_types t ON t.stock_num = p.stock_num
-	WHERE p.manu_code = 'AZZ' AND t.description LIKE '%tennis%'
+	WHERE p.manu_code = 'ANZ' AND t.description LIKE '%tennis%'
 
-ROLLBACK TRANSACTION
+COMMIT

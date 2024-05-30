@@ -21,16 +21,17 @@ BEGIN
 	INSERT INTO Products_Historia_Precios
 	SELECT d.stock_num, d.manu_code, GETDATE(),SUSER_NAME(), d.unit_price, i.unit_price, 'I' FROM deleted d
 	JOIN inserted i ON i.manu_code = d.manu_code AND i.stock_num = d.stock_num
+	WHERE i.unit_price != d.unit_price
 END
 
 -- EJ 2
 
 CREATE TRIGGER borradosProductos
 ON Products_Historia_Precios
-AFTER DELETE
+INSTEAD OF DELETE
 AS
 BEGIN
-	UPDATE Products_Historia_Precios SET state = 'I' WHERE stock_historia_id = (SELECT d.stock_historia_id FROM deleted d)
+	UPDATE Products_Historia_Precios SET state = 'I' WHERE stock_historia_id IN (SELECT d.stock_historia_id FROM deleted d)
 END
 
 -- EJ 3
@@ -50,40 +51,13 @@ BEGIN
 	ELSE
 	BEGIN
 		RAISERROR('No es un horario apto para hacer inserts',16,1)
-		ROLLBACK TRANSACTION
-		RETURN
 	END
 END
 
 -- EJ 4
 
-CREATE TRIGGER borradoORders
-ON orders
-AFTER DELETE
-AS
-BEGIN
-	
-	
-
-END
-
 -- EJ 5
 
-CREATE TRIGGER detectorManuCode
-ON items
-AFTER INSERT
-AS
-BEGIN
-
-	IF ( (SELECT i.manu_code FROM inserted i) NOT IN (SELECT manu_code FROM manufact))
-	BEGIN
-		INSERT INTO manufact
-		SELECT i.manu_code, 'Manu Orden ' + i.order_num, 1 FROM inserted i
-		WHERE i.manu_code NOT IN (SELECT manu_code FROM manufact)
-	END
-	
-	
-END
 
 -- EJ 6
 
@@ -106,7 +80,6 @@ BEGIN
 	
 	INSERT INTO Products_replica
 	SELECT i.stock_num, i.manu_code, i.unit_price, i.unit_code, i.status FROM inserted i
-	WHERE i.stock_num + i.manu_code NOT IN (SELECT stock_num+manu_code FROM Products_replica)
 
 END
 
@@ -117,7 +90,7 @@ AS
 BEGIN
 	
 	UPDATE Products_replica
-	SELECT i.stock_num, i.manu_code, i.unit_price, i.unit_code, i.status FROM inserted i
+	SET i.stock_num, i.manu_code, i.unit_price, i.unit_code, i.status FROM inserted i
 	WHERE i.stock_num + i.manu_code NOT IN (SELECT stock_num+manu_code FROM Products_replica)
 
 END

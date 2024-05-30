@@ -74,17 +74,19 @@ ORDER BY 1,2
 
 -- EJ 12
 
-SELECT m.manu_name, t.description, i.quantity, i.unit_price * i.quantity AS MontoTotal FROM items i
+SELECT m.manu_name, t.description, sum(i.quantity), sum(i.unit_price * i.quantity) AS MontoTotal FROM items i
 JOIN manufact m ON m.manu_code = i.manu_code
 JOIN product_types t ON t.stock_num = i.stock_num
 JOIN orders o ON o.order_num = i.order_num
-WHERE MONTH(o.order_date) = 5 OR MONTH(o.order_date) = 6
-ORDER BY i.unit_price * i.quantity DESC
+WHERE MONTH(o.order_date) BETWEEN 5 AND 6 AND m.manu_code IN ('ANZ', 'HRO', 'HSK', 'SMT')
+GROUP BY m.manu_name, t.description
+ORDER BY sum(i.unit_price * i.quantity) DESC
 
 -- EJ 13
 
-SELECT FORMAT(o.order_date,'yyyy-MM') AS Mes ,SUM(i.quantity) AS Cantidad, SUM(i.quantity * i.unit_price) AS Monto_Total FROM orders o
-JOIN items i on i.order_num = o.order_num
-GROUP BY FORMAT(o.order_date,'yyyy-MM'),i.stock_num
-ORDER BY FORMAT(o.order_date,'yyyy-MM') DESC
-
+SELECT CAST(YEAR(order_date) AS VARCHAR)+'/'+CAST(MONTH(order_date) AS VARCHAR) AnioMes,
+SUM(quantity) AS Cantidad, SUM(unit_price*quantity) AS Total
+FROM orders O 
+JOIN items i ON (o.order_num=i.order_num)
+GROUP BY CAST(YEAR(order_date) AS VARCHAR)+'/'+CAST(MONTH(order_date) AS VARCHAR)
+ORDER BY 3 DESC
