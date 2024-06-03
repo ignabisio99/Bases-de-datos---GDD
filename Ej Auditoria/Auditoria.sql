@@ -131,3 +131,45 @@ DELETE FROM manufact WHERE manu_code = 'ZZZ'
 
 SELECT * FROM auditoria
 
+-- EJ 7
+
+CREATE TABLE errorAudit(
+	errorID INTEGER IDENTITY(1,1) PRIMARY KEY,
+	sqlError INTEGER,
+	isamError INTEGER,
+	errorInfo CHAR(70),
+	nombreTabla VARCHAR(30) NOT NULL,
+	operacion CHAR,
+	rowData VARCHAR(255) NOT NULL,
+	usuario VARCHAR(255) DEFAULT SUSER_NAME(),
+	fecha DATETIME DEFAULT GETDATE(),
+	errorStatus CHAR CHECK(errorStatus IN ('P','F')) DEFAULT 'P'
+)
+
+-- EJ 8
+
+ALTER PROCEDURE altaAuditoria(@NOMBRE_TABLA VARCHAR(30), @OPERACION CHAR(1), @ROWDATA VARCHAR(30))
+AS
+BEGIN
+	BEGIN TRY
+		INSERT INTO auditoria(nombreTabla, operacion, rowData)
+		VALUES (@NOMBRE_TABLA, @OPERACION, @ROWDATA)
+	END TRY
+	BEGIN CATCH
+        DECLARE @SqlError INT = ERROR_NUMBER();
+        DECLARE @ErrorInfo CHAR(70) = ERROR_MESSAGE();
+
+        INSERT INTO errorAudit (sqlError, errorInfo, nombreTabla, operacion, rowData)
+        VALUES (@SqlError, @ErrorInfo, @NOMBRE_TABLA, @OPERACION, @ROWDATA)
+    END CATCH
+END
+
+-- EJ 10
+
+CREATE PROCEDURE REPROCESA_DATA
+BEGIN
+	
+	DECLARE C_ERRORAUDIT CURSOR FOR
+	SELECT operacion, rowData, usuario, fecha FROM errorAudit
+
+END
