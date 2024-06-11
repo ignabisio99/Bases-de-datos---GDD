@@ -63,11 +63,29 @@
  
  -- EJ 5
 
- SELECT c.customer_num, c.fname, c.lname, o.paid_date
+ SELECT c.customer_num, c.fname, c.lname, o.paid_date, SUM(i.quantity * i.unit_price)
  FROM customer c
  LEFT JOIN orders o ON o.customer_num = c.customer_num
  LEFT JOIN items i ON i.order_num = o.order_num
- GROUP BY c.customer_num, c.fname, c.lname, o.paid_date
+ WHERE o.order_num = (SELECT MAX(order_num) FROM orders WHERE customer_num = c.customer_num)
+	OR c.customer_num NOT IN (SELECT customer_num FROM orders)
+ GROUP BY c.customer_num, c.fname, c.lname, o.paid_date, o.order_num
+ HAVING SUM(i.quantity * i.unit_price) >=
+		(SELECT SUM(i1.quantity * i1.unit_price) / COUNT(DISTINCT o1.order_num) FROM orders o1
+		JOIN items i1 ON i1.order_num = o1.order_num
+		WHERE o.order_num > o1.order_num AND o1.customer_num = c.customer_num)
+	OR SUM(i.quantity * i.unit_price) IS NULL
  ORDER BY SUM(i.quantity * i.unit_price) DESC
 
  -- EJ 6
+
+ SELECT i.stock_num, p.description, i.manu_code, SUM(i.quantity) as CantVend, SUM(i.quantity * i.unit_price) AS Total
+ FROM product_types p
+ JOIN items i ON i.stock_num = p.stock_num
+ GROUP BY i.stock_num, p.description, i.manu_code
+ HAVING SUM(i.quantity) = (SELECT TOP 1 SUM(i2.quantity) FROM items i2
+							WHERE i2.stock_num = i.stock_num
+							GROUP BY i2.manu_code
+							ORDER BY SUM(i2.quantity) DESC)
+ ORDER BY i.stock_num, SUM(i.quantity) DESC, SUM(i.quantity * i.unit_price) DESC 
+
