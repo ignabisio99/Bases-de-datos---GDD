@@ -91,7 +91,7 @@ FROM orders
 SELECT o.customer_num, o.order_num, SUM(i.quantity * i.unit_price) MontoOrdenTotal 
 FROM orders o
 JOIN customer c ON c.customer_num = o.customer_num
-JOIN items i ON i.order_num = o.order_num
+LEFT JOIN items i ON i.order_num = o.order_num
 WHERE c.state = 'CA'
 GROUP BY o.customer_num, o.order_num
 HAVING o.customer_num IN (SELECT o1.customer_num FROM orders o1
@@ -111,31 +111,54 @@ AND o.order_num IN (SELECT o2.order_num FROM orders o2
 -- EJ 7
 
 SELECT TOP 1 s.state, s.sname, c.lname + ', ' + c.fname Cliente1, c1.lname + ', ' + c1.fname Cliente2, 
-SUM(i1.quantity * i1.unit_price) + SUM(i2.quantity * i2.unit_price) TotalSolicitado
+totcli1 + totcli2 TotalSolicitado
 FROM state s
 JOIN customer c ON c.state = s.state
 JOIN customer c1 ON c1.state = s.state AND c1.customer_num != c.customer_num
-JOIN orders o1 ON o1.customer_num = c.customer_num
-JOIN orders o2 ON o2.customer_num = c1.customer_num
-JOIN items i1 ON i1.order_num = o1.order_num
-JOIN items i2 ON i2.order_num = o2.order_num
+JOIN (SELECT o1.customer_num, SUM(unit_price*quantity) totcli1
+		FROM orders o1 JOIN items i1 ON (o1.order_num = i1.order_num)
+		GROUP BY o1.customer_num) totc1
+		ON (c.customer_num = totc1.customer_num)
+		JOIN (SELECT o2.customer_num, SUM(unit_price*quantity) totcli2
+		FROM orders o2 JOIN items i2 ON (o2.order_num = i2.order_num)
+		GROUP BY customer_num) totc2 ON (c1.customer_num = totc2.customer_num)
 WHERE c.state = 'CA'
-GROUP BY s.state, s.sname, c.lname, c.fname, c1.lname, c1.fname
-ORDER BY SUM(i1.quantity * i1.unit_price) + SUM(i2.quantity * i2.unit_price) DESC
+ORDER BY 5 DESC
 
 -- EJ 8
 
-SELECT o.order_num, o.customer_num, o.order_date, 
-CASE
-	WHEN c.status = 'P' THEN NULL
-	ELSE o.order_date + 1 + m.lead_time
-END AS FechaModificada
-FROM orders o
-JOIN items i ON i.order_num = o.order_num
-JOIN manufact m ON i.manu_code = m.manu_code
-JOIN customer c ON c.customer_num = o.customer_num
+SELECT DISTINCT o1.order_num, o1.customer_num, o1.order_date, NULL 'Fecha Modificada'
+FROM orders o1 
+JOIN items i1 ON o1.order_num = i1.order_num
+JOIN (SELECT TOP 1 o2.customer_num, SUM(quantity) totcliente
+		FROM orders o2 JOIN items i2 ON o2.order_num = i2.order_num
+		WHERE i2.manu_code='ANZ'
+		GROUP BY o2.customer_num
+		ORDER BY 2 DESC) sub1 ON o1.customer_num = sub1.customer_num
+		WHERE o1.order_num IN (SELECT DISTINCT TOP 5 o2.order_num
+		FROM orders o2 JOIN items i2 ON o2.order_num = i2.order_num
+		WHERE i2.manu_code='ANZ'
+		ORDER BY o2.order_num DESC)
+UNION
+SELECT DISTINCT o1.order_num, o1.customer_num, o1.order_date, o1.order_date + m1.lead_time + 1 'Fecha Modificada'
+FROM orders o1 
+JOIN items i1 ON (o1.order_num = i1.order_num)
+JOIN (SELECT TOP 1 o2.customer_num, SUM(quantity) totcliente
+		FROM orders o2 JOIN items i2
+		ON (o2.order_num = i2.order_num)
+		WHERE i2.manu_code='ANZ'
+		GROUP BY o2.customer_num
+		ORDER BY 2 DESC) sub1
+		ON (o1.customer_num <> sub1.customer_num)
+		JOIN manufact m1
+		ON (i1.manu_code = m1.manu_code)
+		WHERE o1.order_num IN (SELECT DISTINCT TOP 5 o2.order_num
+		FROM orders o2 JOIN items i2
+		ON (o2.order_num = i2.order_num)
+		WHERE i2.manu_code='ANZ'
+		ORDER BY o2.order_num DESC)
+		AND i1.manu_code = 'ANZ'
 ORDER BY 4
-
 -- EJ 9
 
 SELECT c.customer_num, c.fname, c.lname, c.state, COUNT(DISTINCT o.order_num) Cant_Ordenes,
